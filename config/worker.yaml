@@ -1,0 +1,14 @@
+storage:
+  type: "database" 
+  database:
+    dsn: "host=localhost port=54320 user=postgres password=password dbname=postgres sslmode=disable"
+
+limit:
+  time: 10
+  cpu: 1
+  memory: 512
+
+process: 16
+
+name: "猫猫"
+  

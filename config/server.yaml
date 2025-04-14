@@ -1,0 +1,8 @@
+app:
+  env: "debug" # release or debug
+  port: 8080
+
+storage:
+  type: "database"  # memory or database
+  database:
+    dsn: "host=localhost port=54320 user=postgres password=password dbname=postgres sslmode=disable"
