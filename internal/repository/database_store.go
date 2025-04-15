@@ -98,15 +98,10 @@ func (s *PostgresStore) DispatchExecutionTask(id string) error {
 }
 
 func (s *PostgresStore) GetTask(ctx context.Context) (*model.Paste, error) {
-	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
-	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback()
 
 	// 原子性地删除并获取队列中最旧的任务ID
 	var taskID string
-	err = tx.QueryRowContext(ctx,
+	err := s.db.QueryRowContext(ctx,
 		`DELETE FROM queue 
 		WHERE ctid = (
 			SELECT ctid FROM queue 
@@ -121,10 +116,6 @@ func (s *PostgresStore) GetTask(ctx context.Context) (*model.Paste, error) {
 			return nil, nil // 没有任务时返回nil
 		}
 		return nil, fmt.Errorf("failed to get task: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	// 获取完整的任务数据
