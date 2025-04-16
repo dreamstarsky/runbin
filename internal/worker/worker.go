@@ -9,6 +9,8 @@ import (
 	"runbin/internal/config"
 	"runbin/internal/model"
 	"runbin/internal/repository"
+
+	"github.com/docker/docker/client"
 )
 
 type Worker struct {
@@ -39,6 +41,11 @@ func (w *Worker) processTasks(ctx context.Context) {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		log.Fatalf("Failed to create docker client: %v", err)
+	}
+
 	log.Println("Thread start!")
 
 	for {
@@ -48,13 +55,12 @@ func (w *Worker) processTasks(ctx context.Context) {
 				if task == nil {
 					continue
 				}
-				if err := w.handleTask(ctx, task); err != nil {
+				if err := w.handleTask(ctx, task, cli); err != nil {
 					log.Printf("Worker error at PasteID: %s, error: %v\n", task.ID, err)
 				}
 				if err := w.repo.Update(task); err != nil {
 					log.Printf("Update error at PasteID: %s, error: %v\n", task.ID, err)
 				}
-				log.Printf("Judged task %s", task.ID)
 			} else {
 				log.Printf("Worker get task error: %v\n", err)
 			}
@@ -64,19 +70,18 @@ func (w *Worker) processTasks(ctx context.Context) {
 	}
 }
 
-func (w *Worker) handleTask(ctx context.Context, task *model.Paste) error {
+func (w *Worker) handleTask(ctx context.Context, task *model.Paste, cli *client.Client) error {
 	log.Printf("Hangling task %s for language %s", task.ID, task.Language)
 
 	task.Status = model.StatusRunning
 	task.BackEnd = w.cfg.Name
 	w.repo.Update(task)
 
-
 	var err error
 
 	switch task.Language {
 	case "c++20":
-		err = w.RunCppTask(ctx, task)
+		err = w.RunCppTask(ctx, task, cli)
 	default:
 		err = fmt.Errorf("Unsupported language '%s'", task.Language)
 	}
@@ -85,5 +90,8 @@ func (w *Worker) handleTask(ctx context.Context, task *model.Paste) error {
 		task.Status = model.StatusUnknownError
 		task.CompileLog = err.Error()
 	}
+
+	log.Printf("Judged task %s, status: %s, runtime: %dms, memory: %dkb", task.ID, task.Status, task.ExecutionTimeMs, task.MemoryUsageKb)
+
 	return err
 }

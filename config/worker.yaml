@@ -8,7 +8,7 @@ limit:
   cpu: 1
   memory: 512
 
-process: 16
+process: 4
 
 name: "猫猫"
   
