@@ -40,6 +40,10 @@ func (h *PasteHandler) SubmitPaste(c *gin.Context) {
 		UpdatedAt: time.Now(),
 	}
 
+	if !req.Run {
+		paste.Status = model.StatusCompleted
+	}
+
 	if err := h.repo.Save(paste); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Internal Server Error",
