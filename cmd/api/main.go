@@ -2,13 +2,16 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"strconv"
+	"time"
 
 	"runbin/internal/config"
 	"runbin/internal/controller"
 	"runbin/internal/repository"
 	"runbin/internal/router"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -36,6 +39,28 @@ func main() {
 
 	// Create router engine
 	engine := gin.Default()
+
+	// Add CORS middleware
+	engine.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+	engine.Use(func(c *gin.Context) {
+		if c.Request.Method == http.MethodOptions {
+			c.Header("Access-Control-Allow-Origin", "*")
+			c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			c.Header("Access-Control-Allow-Headers", "86400")
+			c.AbortWithStatus(http.StatusOK)
+			return
+		}
+		c.Next()
+	})
+
 	engine.SetTrustedProxies(nil)
 
 	// Setup routes
