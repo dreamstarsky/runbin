@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	cfg := config.LoadWorker("/home/xkm/project/runbin/config/worker.yaml")
+	cfg := config.LoadWorker("config/worker.yaml")
 
 	// Initialize storage
 	var store repository.PasteRepository
