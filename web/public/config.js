@@ -1,0 +1,5 @@
+window.CONFIG = {
+    BACKEND: "__BACKEND_URL_PLACEHOLDER__",
+    LSP_SERVER: "__LSP_SERVER_URL_PLACEHOLDER__"
+  };
+  
