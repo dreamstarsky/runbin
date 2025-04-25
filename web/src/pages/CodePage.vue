@@ -23,8 +23,9 @@
           </div>
           <div class="flex-1 min-h-0 ">
             <div class="w-full h-full overflow-hidden">
-              <textarea name="stdin" id="stdin" class="w-full h-full resize-none outline-none border-0 p-2 whitespace-nowrap"
-                placeholder="请输入测试样例" v-model="stdin"></textarea>
+              <textarea name="stdin" id="stdin"
+                class="w-full h-full resize-none outline-none border-0 p-2 whitespace-nowrap" placeholder="请输入测试样例"
+                v-model="stdin"></textarea>
             </div>
           </div>
         </div>
@@ -82,8 +83,10 @@ const status = ref('completed')
 const stderr = ref('')
 const time = ref(0)
 const log = ref('')
-const serverUri = window.CONFIG.LSP_SERVER !== '__LSP_SERVER_URL_PLACEHOLDER__'? window.CONFIG.LSP_SERVER : import.meta.env.VITE_LSP_SERVER;
-const backend = window.CONFIG.BACKEND !== '__BACKEND_URL_PLACEHOLDER__'? window.CONFIG.BACKEND : import.meta.env.VITE_BACKEND;
+const isLoading = ref(false)
+
+const serverUri = window.CONFIG.LSP_SERVER !== '__LSP_SERVER_URL_PLACEHOLDER__' ? window.CONFIG.LSP_SERVER : import.meta.env.VITE_LSP_SERVER;
+const backend = window.CONFIG.BACKEND !== '__BACKEND_URL_PLACEHOLDER__' ? window.CONFIG.BACKEND : import.meta.env.VITE_BACKEND;
 const ls = languageServer({
   serverUri,
   rootUri: 'file:///main.cpp',
@@ -136,6 +139,7 @@ onMounted(() => {
   })
   console.log(props.id)
   if (props.id !== null && props.id !== undefined && props.id !== '') {
+    isLoading.value = true
     fetch(backend + `/api/pastes/${props.id}`)
       .then(res => res.json())
       .then(res => {
@@ -157,8 +161,11 @@ onMounted(() => {
             getStatus(props.id)
             if (status.value !== 'pending' && status.value !== 'running') {
               clearInterval(timer)
+              isLoading.value = false
             }
           }, 1000)
+        }else {
+          isLoading.value = false
         }
       })
       .catch(err => {
@@ -169,6 +176,11 @@ onMounted(() => {
 })
 
 const handleRun = (isRun: boolean) => {
+  if (isLoading.value) {
+    console.log("别急")
+    return
+  }
+  isLoading.value = true
   console.log('run')
   fetch(backend + '/api/pastes', {
     method: 'POST',
