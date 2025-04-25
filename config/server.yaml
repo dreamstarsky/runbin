@@ -1,5 +1,5 @@
 app:
-  env: "debug" # release or debug
+  env: "release" # release or debug
   port: 8080
 
 storage:

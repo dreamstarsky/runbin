@@ -31,7 +31,7 @@ func LoadApi(configFile string) *ApiConfig {
 	v.SetConfigType("yaml")
 	
 	// Set default values
-	v.SetDefault("app.env", "development")
+	v.SetDefault("app.env", "debug")
 	v.SetDefault("app.port", 8080)
 	v.SetDefault("storage.type", "memory")
 

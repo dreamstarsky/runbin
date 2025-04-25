@@ -19,6 +19,10 @@ func main() {
 	// Load configuration
 	cfg := config.LoadApi("config/server.yaml")
 
+	if cfg.App.Env == "release" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	// Initialize storage
 	var store repository.PasteRepository
 	switch cfg.Storage.Type {
