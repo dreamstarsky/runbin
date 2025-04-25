@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -48,7 +47,6 @@ func monitorMemory(ctx context.Context, cli *client.Client, containerID string, 
 
 			if statsJSON.MemoryStats.Stats != nil {
 				if currentMem, ok := statsJSON.MemoryStats.Stats["anon"]; ok {
-					log.Println(currentMem)
 					if currentMem > *maxMem {
 						*maxMem = currentMem
 					}
