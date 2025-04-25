@@ -82,9 +82,8 @@ const status = ref('completed')
 const stderr = ref('')
 const time = ref(0)
 const log = ref('')
-
-const serverUri = window.CONFIG.LSP_SERVER;
-const backend = window.CONFIG.BACKEND;
+const serverUri = window.CONFIG.LSP_SERVER !== '__LSP_SERVER_URL_PLACEHOLDER__'? window.CONFIG.LSP_SERVER : import.meta.env.VITE_LSP_SERVER;
+const backend = window.CONFIG.BACKEND !== '__BACKEND_URL_PLACEHOLDER__'? window.CONFIG.BACKEND : import.meta.env.VITE_BACKEND;
 const ls = languageServer({
   serverUri,
   rootUri: 'file:///main.cpp',
@@ -135,7 +134,8 @@ onMounted(() => {
     state,
     parent: editorContainer.value as HTMLElement
   })
-  if (props.id !== null) {
+  console.log(props.id)
+  if (props.id !== null && props.id !== undefined && props.id !== '') {
     fetch(backend + `/api/pastes/${props.id}`)
       .then(res => res.json())
       .then(res => {
