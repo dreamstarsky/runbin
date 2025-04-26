@@ -62,11 +62,12 @@ import { cpp } from '@codemirror/lang-cpp'
 import { basicSetup } from 'codemirror'
 import { languageServer } from 'codemirror-languageserver';
 import { keymap } from '@codemirror/view'
-import { indentMore, indentLess, insertTab } from "@codemirror/commands";
+import { indentMore, indentLess, insertTab, indentWithTab } from "@codemirror/commands";
 import { oneDark } from "@codemirror/theme-one-dark";
 import runIcon from '../assets/run.svg'
 import saveIcon from '../assets/save.svg'
 import { useRouter } from 'vue-router'
+import { indentUnit } from '@codemirror/language';
 
 const router = useRouter()
 
@@ -115,6 +116,7 @@ function getStatus(id: string) {
 }
 
 onMounted(() => {
+  
   const oldCode = localStorage.getItem('code')
   stdin.value = localStorage.getItem('stdin') || ''
   const state = EditorState.create({
@@ -123,8 +125,9 @@ onMounted(() => {
       basicSetup,
       cpp(),
       ls,
+      indentUnit.of("    "),
       keymap.of([
-        { key: "Tab", run: indentMore },
+        { key: "Tab", run: indentMore},
         { key: "Shift-Tab", run: indentLess },
         // 如果需要在行中插入真实 Tab：
         { key: "Mod-Tab", run: insertTab },
