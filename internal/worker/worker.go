@@ -45,6 +45,7 @@ func (w *Worker) processTasks(ctx context.Context) {
 	if err != nil {
 		log.Fatalf("Failed to create docker client: %v", err)
 	}
+	defer cli.Close()
 
 	log.Println("Thread start!")
 

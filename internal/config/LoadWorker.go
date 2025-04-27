@@ -13,10 +13,11 @@ type LimitConfig struct {
 }
 
 type WorkerConfig struct {
-	Storage StorageConfig
-	Limit   LimitConfig
-	Process int
-	Name    string
+	Storage       StorageConfig
+	Limit         LimitConfig
+	Process       int
+	Name          string
+	CompilerImage string
 }
 
 func LoadWorker(configFile string) *WorkerConfig {
@@ -29,6 +30,7 @@ func LoadWorker(configFile string) *WorkerConfig {
 	v.SetDefault("limit.memory", 512*1024)
 	v.SetDefault("process", 1)
 	v.SetDefault("name", "default name")
+	v.SetDefault("compilerimage", "cpp_gcc-latest:latest")
 
 	if err := v.ReadInConfig(); err != nil {
 		log.Fatalf("Failed to read config file: %v", err)
