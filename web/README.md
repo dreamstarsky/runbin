@@ -14,3 +14,4 @@ docker run -d --name=lsp-server -p 3003:3003 hxzzz/cpplsp:latest
 ```
 cpp 语言服务器
 `ws://127.0.0.1:3003/cpp`
+
