@@ -39,7 +39,7 @@
               <div v-show="time !== 0">
                 运行时间：{{ time }} ms
               </div>
-              {{ status !== 'completed' ? status : (stdout === '' ? 'Empty' : stdout) }}
+              <pre>{{ status !== 'completed' ? status : (stdout === '' ? 'Empty' : stdout) }}</pre>
               <div v-show="stderr !== ''" class="text-red-500">
                 {{ stderr }}
               </div>
@@ -55,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, defineProps } from 'vue'
+import { ref, onMounted, defineProps, onUnmounted } from 'vue'
 import { EditorView } from '@codemirror/view'
 import { EditorState } from '@codemirror/state'
 import { cpp } from '@codemirror/lang-cpp'
@@ -85,6 +85,7 @@ const stderr = ref('')
 const time = ref(0)
 const log = ref('')
 const isLoading = ref(false)
+const editorView = ref<EditorView | null>(null)
 
 const serverUri = window.CONFIG.LSP_SERVER !== '__LSP_SERVER_URL_PLACEHOLDER__' ? window.CONFIG.LSP_SERVER : import.meta.env.VITE_LSP_SERVER;
 const backend = window.CONFIG.BACKEND !== '__BACKEND_URL_PLACEHOLDER__' ? window.CONFIG.BACKEND : import.meta.env.VITE_BACKEND;
@@ -93,11 +94,9 @@ const ls = languageServer({
   rootUri: 'file:///main.cpp',
   workspaceFolders: [],
   documentUri: `file:///main.cpp`,
-  languageId: 'cpp'
+  languageId: 'cpp',
 });
-
 const editorContainer = ref<HTMLElement | null>(null)
-let view: EditorView
 
 function getStatus(id: string) {
   fetch(backend + `/api/pastes/${props.id}`)
@@ -116,7 +115,7 @@ function getStatus(id: string) {
 }
 
 onMounted(() => {
-  
+
   const oldCode = localStorage.getItem('code')
   stdin.value = localStorage.getItem('stdin') || ''
   const state = EditorState.create({
@@ -127,7 +126,7 @@ onMounted(() => {
       ls,
       indentUnit.of("    "),
       keymap.of([
-        { key: "Tab", run: indentMore},
+        { key: "Tab", run: indentMore },
         { key: "Shift-Tab", run: indentLess },
         // 如果需要在行中插入真实 Tab：
         { key: "Mod-Tab", run: insertTab },
@@ -135,8 +134,7 @@ onMounted(() => {
       oneDark,
     ]
   })
-
-  view = new EditorView({
+  editorView.value = new EditorView({
     state,
     parent: editorContainer.value as HTMLElement
   })
@@ -146,10 +144,13 @@ onMounted(() => {
     fetch(backend + `/api/pastes/${props.id}`)
       .then(res => res.json())
       .then(res => {
-        view.dispatch({
+        if (!editorView.value) {
+          return;
+        }
+        editorView.value.dispatch({
           changes: {
             from: 0,
-            to: view.state.doc.length,
+            to: editorView.value.state.doc.length,
             insert: res.code
           }
         })
@@ -167,7 +168,7 @@ onMounted(() => {
               isLoading.value = false
             }
           }, 1000)
-        }else {
+        } else {
           isLoading.value = false
         }
       })
@@ -178,10 +179,22 @@ onMounted(() => {
   }
 })
 
+onUnmounted(() => {
+  if (editorView.value) {
+    console.log("Destroying CodeMirror EditorView and closing LSP connection...");
+    editorView.value.destroy();
+    editorView.value = null;
+    console.log("EditorView destroyed.");
+  }
+});
+
 const handleRun = (isRun: boolean) => {
   if (isLoading.value) {
     console.log("别急")
     return
+  }
+  if (!editorView.value) {
+    return;
   }
   isLoading.value = true
   console.log('run')
@@ -191,7 +204,7 @@ const handleRun = (isRun: boolean) => {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      code: view.state.doc.toString(),
+      code: editorView.value.state.doc.toString() ?? '',
       stdin: isRun ? stdin.value : '',
       language: 'c++20',
       run: isRun
@@ -215,8 +228,10 @@ const handleRun = (isRun: boolean) => {
 }
 
 setInterval(() => {
-  localStorage.setItem('code', view.state.doc.toString())
-  localStorage.setItem('stdin', stdin.value)
+  if (editorView.value) {
+    localStorage.setItem('code', editorView.value.state.doc.toString())
+    localStorage.setItem('stdin', stdin.value)
+  }
 }, 1000)
 
 
