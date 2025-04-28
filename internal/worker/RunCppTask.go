@@ -152,8 +152,7 @@ func runCpp(ctx context.Context, task *model.Paste, cli *client.Client, tmpDir s
 	}
 	if usageData, err := os.ReadFile(usagePath); err == nil {
 		var usage Usage
-		fmt.Println(string(usageData))
-		fmt.Println(json.Unmarshal(usageData, &usage))
+		json.Unmarshal(usageData, &usage)
 		task.MemoryUsageKb = int(usage.MaxMemory)
 		task.ExecutionTimeMs = int(usage.RealTime * 1000) 
 	}
