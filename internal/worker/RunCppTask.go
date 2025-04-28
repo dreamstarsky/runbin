@@ -162,7 +162,7 @@ func runCpp(ctx context.Context, task *model.Paste, cli *client.Client, tmpDir s
 
 func (w *Worker) RunCppTask(ctx context.Context, task *model.Paste, cli *client.Client) error {
 	// 临时文件夹
-	tmpDir, err := os.MkdirTemp("", "cpp_compile_")
+	tmpDir, err := os.MkdirTemp("/dev/shm/", "cpp_compile_")
 	if err != nil {
 		return fmt.Errorf("create temp dir error: %v", err)
 	}
