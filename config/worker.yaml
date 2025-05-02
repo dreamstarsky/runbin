@@ -4,11 +4,13 @@ storage:
     dsn: "host=localhost port=54320 user=postgres password=password dbname=postgres sslmode=disable"
 
 limit:
-  time: 10
-  cpu: 1
-  memory: 512
+  time: 10.0    # s
+  cpu: 1.0        
+  memory: 512   # MB
+  size: 1024    # KB
 
-process: 4
+process: 1
 
-name: "猫猫"
+name: "default name"
   
+compilerimage: "cpp_gcc-latest:latest"

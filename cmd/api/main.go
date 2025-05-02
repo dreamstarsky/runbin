@@ -17,7 +17,7 @@ import (
 
 func main() {
 	// Load configuration
-	cfg := config.LoadApi("config/server.yaml")
+	cfg := config.LoadApi("config/api.yaml")
 
 	if cfg.App.Env == "release" {
 		gin.SetMode(gin.ReleaseMode)
