@@ -10,6 +10,7 @@ type LimitConfig struct {
 	Cpu    float32
 	Memory int
 	Time   float32
+	Size   int
 }
 
 type WorkerConfig struct {
@@ -28,6 +29,7 @@ func LoadWorker(configFile string) *WorkerConfig {
 	v.SetDefault("limit.cpu", 1.0)
 	v.SetDefault("limit.time", 10.0)
 	v.SetDefault("limit.memory", 512*1024)
+	v.SetDefault("limit.size", 1024)
 	v.SetDefault("process", 1)
 	v.SetDefault("name", "default name")
 	v.SetDefault("compilerimage", "cpp_gcc-latest:latest")

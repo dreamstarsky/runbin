@@ -64,6 +64,7 @@ func compileCpp(ctx context.Context, task *model.Paste, cli *client.Client, tmpD
 
 		// Read compilation log
 		if logData, err := os.ReadFile(filepath.Join(tmpDir, "compile.txt")); err == nil {
+			logData = logData[:min(len(logData), cfg.Limit.Size)]
 			task.CompileLog = string(logData)
 		}
 
@@ -144,18 +145,20 @@ func runCpp(ctx context.Context, task *model.Paste, cli *client.Client, tmpDir s
 	usagePath := filepath.Join(tmpDir, "usage.json")
 
 	// Read program output
-	if outData, err := os.ReadFile(stdoutPath); err == nil {
-		task.Stdout = string(outData)
+	if stdoutData, err := os.ReadFile(stdoutPath); err == nil {
+		stdoutData = stdoutData[:min(len(stdoutData), cfg.Limit.Size)]
+		task.Stdout = string(stdoutData)
 	}
-	if outData, err := os.ReadFile(stderrPath); err == nil {
-		task.Stderr = string(outData)
+	if stderrData, err := os.ReadFile(stderrPath); err == nil {
+		stderrData = stderrData[:min(len(stderrData), cfg.Limit.Size)]
+		task.Stderr = string(stderrData)
 	}
 	if usageData, err := os.ReadFile(usagePath); err == nil {
 		var usage Usage
 		fmt.Println(string(usageData))
 		fmt.Println(json.Unmarshal(usageData, &usage))
 		task.MemoryUsageKb = int(usage.MaxMemory)
-		task.ExecutionTimeMs = int(usage.RealTime * 1000) 
+		task.ExecutionTimeMs = int(usage.RealTime * 1000)
 	}
 	return nil
 }
