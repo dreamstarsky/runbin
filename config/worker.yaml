@@ -7,7 +7,7 @@ limit:
   time: 10.0    # s
   cpu: 1.0        
   memory: 512   # MB
-  size: 1024    # KB
+  size: 1024000 # B
 
 process: 1
 
