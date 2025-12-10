@@ -1,7 +1,7 @@
 <template>
   <div class="bg-[#282c34] text-md flex justify-center items-center w-[100vw] flex-1 min-h-0">
     <div class="w-3/4 h-3/4 bg-[#282c34] text-sm scale-133 flex">
-      <div class="w-3/4 h-full min-w-0 overflow-auto">
+      <div class="w-3/4 h-full min-w-0 ">
         <div ref="editorContainer" class="w-full h-full">
         </div>
       </div>
@@ -121,6 +121,19 @@ onMounted(() => {
       cpp(),
       ls,
       indentUnit.of("    "),
+      EditorView.theme({
+        "&": { height: "100%" },
+        ".cm-scroller": { overflow: "auto" }
+      }),
+      EditorView.updateListener.of((update) => {
+        if (update.docChanged && update.selectionSet) {
+          const cursorParams = update.state.selection.main.head;
+          
+          update.view.dispatch({
+            effects: EditorView.scrollIntoView(cursorParams, { y: "nearest" })
+          });
+        }
+      }),
       keymap.of([
         { key: "Tab", run: indentMore },
         { key: "Shift-Tab", run: indentLess },
