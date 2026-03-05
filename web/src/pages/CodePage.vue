@@ -160,6 +160,7 @@ const IO_SPLIT_KEY = 'code_io_split_ratio'
 const FONT_SCALE_KEY = 'code_font_scale'
 
 const editorThemeCompartment = new Compartment()
+const editorHighlightCompartment = new Compartment()
 
 const serverUri = window.CONFIG.LSP_SERVER !== '__LSP_SERVER_URL_PLACEHOLDER__' ? window.CONFIG.LSP_SERVER : import.meta.env.VITE_LSP_SERVER;
 const backend = window.CONFIG.BACKEND !== '__BACKEND_URL_PLACEHOLDER__' ? window.CONFIG.BACKEND : import.meta.env.VITE_BACKEND;
@@ -204,15 +205,34 @@ function clampFontScale(value: number) {
 
 function createEditorTheme(scale: number) {
   const fontPx = Math.max(12, Math.round((16 * scale) / 100))
+  const fontSize = `${fontPx}px`
+  const fontFamily = '"JetBrains Mono", "Fira Code", "Cascadia Code", "Consolas", monospace'
   return EditorView.theme({
     "&": { height: "100%" },
     ".cm-scroller": { overflow: "auto" },
     ".cm-content, .cm-gutters": {
-      fontSize: `${fontPx}px`,
+      fontSize,
       lineHeight: '1.6',
-      fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", "Consolas", monospace'
+      fontFamily
+    },
+    ".cm-tooltip": {
+      fontSize,
+      fontFamily,
+      lineHeight: '1.6'
+    },
+    ".cm-tooltip .cm-completionLabel, .cm-tooltip .cm-completionDetail, .cm-tooltip .cm-completionInfo": {
+      fontSize,
+      fontFamily
     }
   })
+}
+
+function createHighlightExtensions() {
+  return [
+    syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+    syntaxHighlighting(oneDarkHighlightStyle),
+    oneDark,
+  ]
 }
 
 function requestEditorMeasure() {
@@ -228,6 +248,15 @@ function applyEditorTheme(scale: number = fontScale.value) {
   }
   editorView.value.dispatch({
     effects: editorThemeCompartment.reconfigure(createEditorTheme(scale))
+  })
+}
+
+function refreshHighlighting() {
+  if (!editorView.value) {
+    return
+  }
+  editorView.value.dispatch({
+    effects: editorHighlightCompartment.reconfigure(createHighlightExtensions())
   })
 }
 
@@ -355,6 +384,7 @@ function startResize(event: PointerEvent) {
     document.body.style.removeProperty('cursor')
     isResizing.value = false
     requestEditorMeasure()
+    refreshHighlighting()
   }
 }
 
@@ -399,6 +429,7 @@ function startIoResize(event: PointerEvent) {
     document.body.classList.remove('is-resizing-panel')
     document.body.style.removeProperty('cursor')
     isIoResizing.value = false
+    refreshHighlighting()
   }
 }
 
@@ -426,7 +457,6 @@ watch(panelPosition, (position) => {
 
 watch(panelSize, (size) => {
   localStorage.setItem(PANEL_SIZE_KEY, String(size))
-  requestEditorMeasure()
 })
 
 watch(ioSplit, (size) => {
@@ -473,6 +503,7 @@ onMounted(() => {
       ls,
       indentUnit.of("    "),
       editorThemeCompartment.of(createEditorTheme(fontScale.value)),
+      editorHighlightCompartment.of(createHighlightExtensions()),
       EditorView.updateListener.of((update) => {
         if (update.docChanged && update.selectionSet) {
           const cursorParams = update.state.selection.main.head;
@@ -488,9 +519,6 @@ onMounted(() => {
         // 如果需要在行中插入真实 Tab：
         { key: "Mod-Tab", run: insertTab },
       ]),
-      syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-      syntaxHighlighting(oneDarkHighlightStyle),
-      oneDark,
     ]
   })
   editorView.value = new EditorView({
