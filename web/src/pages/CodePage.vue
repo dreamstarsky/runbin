@@ -149,6 +149,7 @@ const panelPosition = ref<PanelPosition>('right')
 const panelSize = ref(36)
 const ioSplit = ref(50)
 const fontScale = ref(100)
+const isEditorReady = ref(false)
 
 const ZOOM_STEP = 5
 const ZOOM_MIN = 70
@@ -158,19 +159,12 @@ const PANEL_POSITION_KEY = 'code_panel_position'
 const PANEL_SIZE_KEY = 'code_panel_size'
 const IO_SPLIT_KEY = 'code_io_split_ratio'
 const FONT_SCALE_KEY = 'code_font_scale'
+const DEFAULT_CODE = `#include <bits/stdc++.h>\n\nint main() {\n\n}`
 
 const editorThemeCompartment = new Compartment()
-const editorHighlightCompartment = new Compartment()
 
 const serverUri = window.CONFIG.LSP_SERVER !== '__LSP_SERVER_URL_PLACEHOLDER__' ? window.CONFIG.LSP_SERVER : import.meta.env.VITE_LSP_SERVER;
 const backend = window.CONFIG.BACKEND !== '__BACKEND_URL_PLACEHOLDER__' ? window.CONFIG.BACKEND : import.meta.env.VITE_BACKEND;
-const ls = languageServer({
-  serverUri,
-  rootUri: 'file:///main.cpp',
-  workspaceFolders: [],
-  documentUri: `file:///main.cpp`,
-  languageId: 'cpp',
-});
 const editorContainer = ref<HTMLElement | null>(null)
 
 const workbenchStyle = computed(() => ({
@@ -227,19 +221,81 @@ function createEditorTheme(scale: number) {
   })
 }
 
-function createHighlightExtensions() {
+function requestEditorMeasure() {
+  if (!editorView.value) {
+    return
+  }
+  editorView.value.requestMeasure()
+}
+
+function createLanguageServerExtension() {
+  return languageServer({
+    serverUri,
+    rootUri: 'file:///main.cpp',
+    workspaceFolders: [],
+    documentUri: `file:///main.cpp`,
+    languageId: 'cpp',
+  })
+}
+
+function createEditorExtensions(scale: number) {
   return [
+    basicSetup,
+    cpp(),
+    createLanguageServerExtension(),
+    indentUnit.of("    "),
+    editorThemeCompartment.of(createEditorTheme(scale)),
+    EditorView.updateListener.of((update) => {
+      if (update.docChanged && update.selectionSet) {
+        const cursorParams = update.state.selection.main.head;
+
+        update.view.dispatch({
+          effects: EditorView.scrollIntoView(cursorParams, { y: "nearest" })
+        });
+      }
+    }),
+    keymap.of([
+      { key: "Tab", run: indentMore },
+      { key: "Shift-Tab", run: indentLess },
+      // 如果需要在行中插入真实 Tab：
+      { key: "Mod-Tab", run: insertTab },
+    ]),
     syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
     syntaxHighlighting(oneDarkHighlightStyle),
     oneDark,
   ]
 }
 
-function requestEditorMeasure() {
-  if (!editorView.value) {
+function rebuildEditorView() {
+  if (!editorContainer.value) {
     return
   }
-  editorView.value.requestMeasure()
+  const oldView = editorView.value
+  const doc = oldView ? oldView.state.doc.toString() : (localStorage.getItem('code') || DEFAULT_CODE)
+  const selection = oldView ? oldView.state.selection.main : null
+
+  if (oldView) {
+    oldView.destroy()
+    editorView.value = null
+  }
+
+  const state = EditorState.create({
+    doc,
+    extensions: createEditorExtensions(fontScale.value)
+  })
+  const view = new EditorView({
+    state,
+    parent: editorContainer.value
+  })
+
+  if (selection) {
+    const anchor = Math.min(selection.anchor, view.state.doc.length)
+    const head = Math.min(selection.head, view.state.doc.length)
+    view.dispatch({ selection: { anchor, head } })
+  }
+
+  editorView.value = view
+  requestAnimationFrame(() => requestEditorMeasure())
 }
 
 function applyEditorTheme(scale: number = fontScale.value) {
@@ -248,15 +304,6 @@ function applyEditorTheme(scale: number = fontScale.value) {
   }
   editorView.value.dispatch({
     effects: editorThemeCompartment.reconfigure(createEditorTheme(scale))
-  })
-}
-
-function refreshHighlighting() {
-  if (!editorView.value) {
-    return
-  }
-  editorView.value.dispatch({
-    effects: editorHighlightCompartment.reconfigure(createHighlightExtensions())
   })
 }
 
@@ -384,7 +431,6 @@ function startResize(event: PointerEvent) {
     document.body.style.removeProperty('cursor')
     isResizing.value = false
     requestEditorMeasure()
-    refreshHighlighting()
   }
 }
 
@@ -429,7 +475,6 @@ function startIoResize(event: PointerEvent) {
     document.body.classList.remove('is-resizing-panel')
     document.body.style.removeProperty('cursor')
     isIoResizing.value = false
-    refreshHighlighting()
   }
 }
 
@@ -452,7 +497,10 @@ function getStatus(id: string) {
 watch(panelPosition, (position) => {
   panelSize.value = clampPanelSize(panelSize.value, position)
   localStorage.setItem(PANEL_POSITION_KEY, position)
-  nextTick(() => requestEditorMeasure())
+  if (!isEditorReady.value) {
+    return
+  }
+  nextTick(() => rebuildEditorView())
 })
 
 watch(panelSize, (size) => {
@@ -493,38 +541,9 @@ onMounted(() => {
   window.addEventListener('keydown', handleZoomKeydown)
   window.addEventListener('wheel', handleZoomWheel, { passive: false })
 
-  const oldCode = localStorage.getItem('code')
   stdin.value = localStorage.getItem('stdin') || ''
-  const state = EditorState.create({
-    doc: oldCode || `#include <bits/stdc++.h>\n\nint main() {\n\n}`,
-    extensions: [
-      basicSetup,
-      cpp(),
-      ls,
-      indentUnit.of("    "),
-      editorThemeCompartment.of(createEditorTheme(fontScale.value)),
-      editorHighlightCompartment.of(createHighlightExtensions()),
-      EditorView.updateListener.of((update) => {
-        if (update.docChanged && update.selectionSet) {
-          const cursorParams = update.state.selection.main.head;
-
-          update.view.dispatch({
-            effects: EditorView.scrollIntoView(cursorParams, { y: "nearest" })
-          });
-        }
-      }),
-      keymap.of([
-        { key: "Tab", run: indentMore },
-        { key: "Shift-Tab", run: indentLess },
-        // 如果需要在行中插入真实 Tab：
-        { key: "Mod-Tab", run: insertTab },
-      ]),
-    ]
-  })
-  editorView.value = new EditorView({
-    state,
-    parent: editorContainer.value as HTMLElement
-  })
+  rebuildEditorView()
+  isEditorReady.value = true
 
   nextTick(() => requestEditorMeasure())
 
